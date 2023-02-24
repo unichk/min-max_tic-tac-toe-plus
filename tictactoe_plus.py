@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pygame
 import random
+import datetime
 import pickle
 import os
 
@@ -24,10 +25,9 @@ TURN_COLOR = (255, 0, 0)
 circle_image = pygame.transform.scale(pygame.image.load('circle.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7))
 cross_image = pygame.transform.scale(pygame.image.load('cross.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7))
 
-memory = dict()
-if os.path.isfile("memory.pickle"):
-    with open('memory.pickle', 'rb') as f:
-        memory = pickle.load(f)
+minimax_memory = dict()
+if os.path.exists("minimax_memory.pickle"):
+    minimax_memory = pickle.load(open("minimax_memory.pickle", "rb"))
 
 class Game():
     def __init__(self, grid = "0000000000000000000000000", turn = 1, circle_score = 0, cross_score = 0):
@@ -59,9 +59,6 @@ class Game():
         WIN.blit(font.render(f"cross:{self.cross_score}", True, TURN_COLOR if self.turn == -1 else SCORE_COLOR), (460, 10))
 
     def calculate_score(self, new_row, new_col):
-        if self.grid in memory:
-            self.circle = memory[self.grid][0]
-            self.cross = memory[self.grid][1]
         new = self.grid[new_row * 5 + new_col] 
         # right-top diagonal
         if new_row + new_col != 0 and new_row + new_col != 8:
@@ -162,7 +159,6 @@ class Game():
             self.circle_score += score
         elif self.turn == -1:
             self.cross_score += score
-        memory[self.grid] = (self.circle_score, self.cross_score)
 
     def move(self, pos: tuple[float, float],):
         row = int((pos[1] - WIN_HEIGHT + GAME_HEIGHT) / (GRID_HEIGHT + LINE_WIDTH))
@@ -194,7 +190,10 @@ def minimax(game: Game, depth: int, alpha: int, beta: int, maximizing_player: bo
             return game.circle_score - game.cross_score
         if play_circle_cross == 2:
             return game.cross_score - game.circle_score
-        
+    
+    if (game.grid, game.turn, depth, maximizing_player, play_circle_cross) in minimax_memory:
+        return minimax_memory[(game.grid, game.turn, depth, maximizing_player, play_circle_cross)]
+
     if maximizing_player:
         max_eval = -10000
         for idx, grid in enumerate(game.grid):
@@ -208,6 +207,7 @@ def minimax(game: Game, depth: int, alpha: int, beta: int, maximizing_player: bo
                 alpha = max(alpha, eval)
                 if beta <= alpha:
                     break
+        minimax_memory[(game.grid, game.turn, depth, maximizing_player, play_circle_cross)] = max_eval
         return max_eval
     else:
         min_eval = 10000
@@ -222,6 +222,7 @@ def minimax(game: Game, depth: int, alpha: int, beta: int, maximizing_player: bo
                 beta = min(beta, eval)
                 if beta <= alpha:
                     break
+        minimax_memory[(game.grid, game.turn, depth, maximizing_player, play_circle_cross)] = min_eval
         return min_eval
 
 def main():
@@ -244,11 +245,13 @@ def main():
         pygame.display.update()
 
         if (game.turn == 1 and ai == 1) or (game.turn == -1 and ai == 2):
+            ai_start_time = datetime.datetime.now()
             depths = 7
             max_eval = [-10000 for _ in range(depths)]
             best_moves = [[] for _ in range(depths)]
             best_move = (-1, -1)
             for idx, grid in enumerate(game.grid):
+                # grid_start_time = datetime.datetime.now()
                 if grid == "0":
                     new_game: Game = game.copy()
                     new_game.grid = new_game.grid[:idx] + ("1" if ai == 1 else "2") + new_game.grid[idx+1:]
@@ -261,21 +264,27 @@ def main():
                             max_eval[depth] = eval
                         elif eval == max_eval[depth]:
                             best_moves[depth].append(idx)
+                # print(f"gird {idx} time: {datetime.datetime.now() - grid_start_time}")
+            all_best_move = []
+            best_move_appear_times = -100000
             for idx in range(25):
-                best_move = max(best_move, (sum(i.count(idx) for i in best_moves), idx), key = lambda x : x[0])
-            # best_move = random.choice(best_moves)
-            best_move = best_move[1]
+                appear_times = sum(i.count(idx) for i in best_moves)
+                if appear_times > best_move_appear_times:
+                    all_best_move = [idx]
+                    best_move_appear_times = appear_times
+                elif appear_times == best_move_appear_times:
+                    all_best_move.append(idx)
+            best_move = random.choice(all_best_move)
             game.move(((best_move % 5) * (LINE_WIDTH + GRID_WIDTH) + GRID_WIDTH /2, (best_move // 5) * (LINE_WIDTH + GRID_HEIGHT) + GRID_HEIGHT /2 + WIN_HEIGHT - GAME_HEIGHT))
-
+            print(f"ai think time: {datetime.datetime.now() - ai_start_time}")
 
         game.draw()
         clock.tick(FPS)
         pygame.display.update()
 
         if game.turn == 0 and not saved:
-            saved = True
-            with open('memory.pickle', 'wb') as f:
-                pickle.dump(memory, f, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(minimax_memory, open("minimax_memory.pickle", "wb"))
+            saved == True
 
 if __name__ == '__main__':
     main()
