@@ -25,9 +25,16 @@ CROSS_COLOR = (188, 44, 26)
 UNDERLINE_COLOR = (74, 78, 105)
 TEXT_COLOR = (163, 144, 228)
 LAST_MOVE_COLOR = (235, 213, 201)
+MENU_BUTTON_COLOR = (188, 44, 26)
+MENU_BUTTON_HOVER_COLOR = (107, 171, 144)
+HOME_BUTTON_COLOR = (235, 213, 201)
+HOME_BUTTON_HOVER_COLOR = (74, 78, 105)
+BUTTON_TEXT_COLOR = (235, 213, 201)
+MENU_TITLE_COLOR = (0, 0, 0)
 
 circle_image = pygame.transform.scale(pygame.image.load('circle.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7)).convert_alpha()
 cross_image = pygame.transform.scale(pygame.image.load('cross.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7)).convert_alpha()
+home_image = pygame.image.load('home_icon.png').convert_alpha()
 
 minimax_memory = dict()
 save_memory = dict()
@@ -178,18 +185,19 @@ class Game():
     def move(self, pos: tuple[float, float],):
         row = int((pos[1] - WIN_HEIGHT + GAME_HEIGHT) / (GRID_HEIGHT + LINE_WIDTH))
         col = int(pos[0] / (GRID_WIDTH + LINE_WIDTH))
-        self.last_move = (row, col)
-        if self.grid[row * 5 + col] == "0":
-            if self.turn == 1:
-                self.grid = self.grid[:row * 5 + col] + "1" + self.grid[row * 5 + col + 1:]
-                self.calculate_score(row, col)
-            elif self.turn == -1:
-                self.grid = self.grid[:row * 5 + col] + "2" + self.grid[row * 5 + col + 1:]
-                self.calculate_score(row, col)
-            self.turn *= -1
-        
-        if "0" not in self.grid:
-            self.turn = 0
+        if row >= 0 and row < 5 and col >= 0 and col < 5:
+            self.last_move = (row, col)
+            if self.grid[row * 5 + col] == "0":
+                if self.turn == 1:
+                    self.grid = self.grid[:row * 5 + col] + "1" + self.grid[row * 5 + col + 1:]
+                    self.calculate_score(row, col)
+                elif self.turn == -1:
+                    self.grid = self.grid[:row * 5 + col] + "2" + self.grid[row * 5 + col + 1:]
+                    self.calculate_score(row, col)
+                self.turn *= -1
+            
+            if "0" not in self.grid:
+                self.turn = 0
     
     def reset(self):
         self.grid = "0000000000000000000000000" # 1->circle, 2->cross
@@ -334,49 +342,148 @@ def minimax(game: Game, depth: int, alpha: int, beta: int, maximizing_player: bo
         minimax_memory[(game.grid, game.turn, depth, maximizing_player, play_circle_cross)] = min_eval
         return min_eval
 
+class Button():
+    def __init__(self, text: str, rect: pygame.Rect, color: tuple[int, int, int], hover_color: tuple[int, int, int], image: pygame.Surface | None = None, border_radius: int = -1, border_top_left_radius: int = -1, border_top_right_radius: int = -1, border_bottom_left_radius: int = -1, border_bottom_right_radius: int = -1):
+        self.text = text
+        self.rect = rect
+        self.color = color
+        self.hover_color = hover_color
+        if image != None:
+            self.image = pygame.transform.scale(image, (self.rect.width, self.rect.height))
+        else:
+            self.image = image
+        if os.path.exists("Tourney-SemiBold.ttf"):
+            self.font = pygame.font.Font("Tourney-SemiBold.ttf", 55)
+        else:
+            self.font  = pygame.font.SysFont('arial', 55)
+        self.hover = False
+        self.border_radius = border_radius
+        self.border_top_left_radius = border_top_left_radius
+        self.border_top_right_radius = border_top_right_radius
+        self.border_bottom_left_radius = border_bottom_left_radius
+        self.border_bottom_right_radius = border_bottom_right_radius
+    
+    def draw(self):
+        pygame.draw.rect(WIN, self.hover_color if self.hover else self.color, self.rect, border_radius = self.border_radius, border_top_left_radius = self.border_top_left_radius, border_top_right_radius = self.border_top_right_radius, border_bottom_left_radius = self.border_bottom_left_radius, border_bottom_right_radius = self.border_bottom_right_radius)
+        WIN.blit(self.font.render(self.text, True, BUTTON_TEXT_COLOR), (self.rect.x + 20, self.rect.y + 15))
+        if self.image != None:
+            WIN.blit(self.image, self.rect)
+    
+    def clicked(self, pos) -> bool:
+        if self.rect.collidepoint(pos):
+            return True
+        return False
+    
+    def hovered(self, pos):
+        if self.rect.collidepoint(pos):
+            self.hover = True
+        else:
+            self.hover = False
+
+class Menu():
+    def __init__(self):
+        if os.path.exists("Tourney-SemiBold.ttf"):
+            self.font = pygame.font.Font("Tourney-SemiBold.ttf", 120)
+        else:
+            self.font  = pygame.font.SysFont('arial', 120)
+        self.title = self.font.render("MENU", True, MENU_TITLE_COLOR)
+        self.button_pvp = Button("Player vs. Player", pygame.Rect(135, 350, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
+        self.button_pve = Button("Player vs.     AI", pygame.Rect(135, 520, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
+        self.button_eve = Button("    AI      vs.     AI", pygame.Rect(135, 690, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
+    
+    def draw(self):
+        WIN.fill(BACK_GROUND_COLOR)
+        WIN.blit(self.title, (230, 75))
+        self.button_pvp.draw()
+        self.button_pve.draw()
+        self.button_eve.draw()
+
+    def check_hover(self, pos):
+        self.button_pvp.hovered(pos)
+        self.button_pve.hovered(pos)
+        self.button_eve.hovered(pos)
+    
+    def select_mode(self, pos) -> int | None:
+        if self.button_pvp.clicked(pos):
+            return 2
+        if self.button_pve.clicked(pos):
+            return 1
+        if self.button_eve.clicked(pos):
+            return 0
+
 def main():
-    mode = 0 # 0->ai1 vs. ai2, 1->player vs. ai1, 2->player vs. player
     run = True
     clock = pygame.time.Clock()
-    game = Game()
-    ai1 = AI(random.choice([1, 2]))
-    ai2 = AI(1 if ai1.play_circle_cross == 2 else 2)
-    ui = UI(game, 1 if ai1.play_circle_cross == 2 else 2)
 
     while run:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            # player move
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if mode == 1:
-                    if (game.turn == -1 and ai1.play_circle_cross == 1) or (game.turn == 1 and ai1.play_circle_cross == 2):
-                        game.move(event.pos)
-                if mode == 2:
-                    game.move(event.pos)
-
-        WIN.fill(BACK_GROUND_COLOR)
+        state = "menu"
+        menu = Menu()
+        game_mode = None # 0->ai1 vs. ai2, 1->player vs. ai1, 2->player vs. player
+        if state == "menu":
+            menu.check_hover(pygame.mouse.get_pos())
+            menu.draw()
+            pygame.display.update()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    game_mode = menu.select_mode(event.pos)
+                    print(game_mode)
+                    if game_mode != None:
+                        state = "game"
         
-        game.draw()
-        ui.darw()
-        pygame.display.update()
+        if state == "game":
+            game_run = True
+            game = Game()
+            ai1 = AI(random.choice([1, 2]))
+            ai2 = AI(1 if ai1.play_circle_cross == 2 else 2)
+            ui = UI(game, 1 if ai1.play_circle_cross == 2 else 2)
+            home_button = Button("", pygame.Rect(367, 25, 66, 66), HOME_BUTTON_COLOR, HOME_BUTTON_HOVER_COLOR, home_image, 5)
 
-        ai2_can_move = True
-        # ai1 move
-        if mode != 2 and ((game.turn == 1 and ai1.play_circle_cross == 1) or (game.turn == -1 and ai1.play_circle_cross == 2)):
-            game = ai1.move(game)
-            ai2_can_move = False
+            while game_run:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        game_run = False
+                        run = False
+                    # player move
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if game_mode == 1:
+                            if (game.turn == -1 and ai1.play_circle_cross == 1) or (game.turn == 1 and ai1.play_circle_cross == 2):
+                                game.move(event.pos)
+                        if game_mode == 2:
+                            game.move(event.pos)
+                        if game.turn == 0 and home_button.clicked(event.pos):
+                            game_run = False
+
+                WIN.fill(BACK_GROUND_COLOR)
+                
+                game.draw()
+                ui.darw()
+                if game.turn == 0:
+                    home_button.hovered(pygame.mouse.get_pos())
+                    home_button.draw()
+                pygame.display.update()
+
+                if game.turn != 0:
+                    ai2_can_move = True
+                    # ai1 move
+                    if game_mode != 2 and ((game.turn == 1 and ai1.play_circle_cross == 1) or (game.turn == -1 and ai1.play_circle_cross == 2)):
+                        game = ai1.move(game)
+                        ai2_can_move = False
+                    
+                    # ai2 move
+                    if ai2_can_move and game_mode == 0 and ((game.turn == 1 and ai2.play_circle_cross == 1) or (game.turn == -1 and ai2.play_circle_cross == 2)):
+                        game = ai2.move(game)
+
+                    game.draw()
+                    clock.tick(FPS)
+                    pygame.display.update()
+
+            # save minimax_memory
+            pickle.dump(save_memory, open("minimax_memory.pickle", "wb"))
+            state = "menu"
         
-        # ai2 move
-        if ai2_can_move and mode == 0 and ((game.turn == 1 and ai2.play_circle_cross == 1) or (game.turn == -1 and ai2.play_circle_cross == 2)):
-            game = ai2.move(game)
-
-        game.draw()
         clock.tick(FPS)
-        pygame.display.update()
-
-    # save minimax_memory
-    pickle.dump(save_memory, open("minimax_memory.pickle", "wb"))
 
 if __name__ == '__main__':
     main()
