@@ -18,17 +18,22 @@ LINE_WIDTH = 15
 GRID_WIDTH = (GAME_WIDTH - 6 * LINE_WIDTH) / 5
 GRID_HEIGHT = (GAME_HEIGHT - 6 * LINE_WIDTH) / 5
 
-BACK_GROUND_COLOR = (255, 255, 255)
-LINE_COLOR = (0, 0, 0)
-SCORE_COLOR = (0, 0, 0)
-TURN_COLOR = (255, 0, 0)
+BACK_GROUND_COLOR = (242, 233, 228)
+LINE_COLOR = (74, 78, 105)
+CIRCLE_COLOR = (107, 171, 144)
+CROSS_COLOR = (188, 44, 26)
+UNDERLINE_COLOR = (74, 78, 105)
+TEXT_COLOR = (163, 144, 228)
+LAST_MOVE_COLOR = (235, 213, 201)
 
-circle_image = pygame.transform.scale(pygame.image.load('circle.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7))
-cross_image = pygame.transform.scale(pygame.image.load('cross.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7))
+circle_image = pygame.transform.scale(pygame.image.load('circle.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7)).convert_alpha()
+cross_image = pygame.transform.scale(pygame.image.load('cross.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7)).convert_alpha()
 
 minimax_memory = dict()
+save_memory = dict()
 if os.path.exists("minimax_memory.pickle"):
     minimax_memory = pickle.load(open("minimax_memory.pickle", "rb"))
+    save_memory = pickle.load(open("minimax_memory.pickle", "rb"))
 # endregion variables
 
 class Game():
@@ -37,6 +42,7 @@ class Game():
         self.turn = turn # 1->circle, -1->cross
         self.circle_score = circle_score
         self.cross_score = cross_score
+        self.last_move = None
 
     def draw(self):
         # draw line
@@ -46,6 +52,10 @@ class Game():
             pygame.draw.rect(WIN, LINE_COLOR, pygame.Rect((x_coord, 0 + WIN_HEIGHT - GAME_HEIGHT), (LINE_WIDTH, GAME_WIDTH)))
             pygame.draw.rect(WIN, LINE_COLOR, pygame.Rect((0, y_coord + WIN_HEIGHT - GAME_HEIGHT), (GAME_WIDTH, LINE_WIDTH)))
         
+        # draw last move
+        if self.last_move:
+            pygame.draw.rect(WIN, LAST_MOVE_COLOR, pygame.Rect((self.last_move[1] * (GRID_WIDTH + LINE_WIDTH) + LINE_WIDTH, self.last_move[0] * (GRID_HEIGHT + LINE_WIDTH) + LINE_WIDTH + WIN_HEIGHT - GAME_HEIGHT), (GRID_WIDTH, GRID_HEIGHT)))
+
         # draw circle and cross
         for i, grid in enumerate(self.grid):
             row_idx = int(i / 5)
@@ -56,11 +66,6 @@ class Game():
                 WIN.blit(circle_image, (x_coord, y_coord))
             elif grid == "2":
                 WIN.blit(cross_image, (x_coord, y_coord))
-
-        # draw score and turn
-        font = pygame.font.SysFont('arial', 70)
-        WIN.blit(font.render(f"circle:{self.circle_score}", True, TURN_COLOR if self.turn == 1 else SCORE_COLOR), (150, 10))
-        WIN.blit(font.render(f"cross:{self.cross_score}", True, TURN_COLOR if self.turn == -1 else SCORE_COLOR), (460, 10))
 
     def calculate_score(self, new_row: int, new_col: int):
         new = self.grid[new_row * 5 + new_col]
@@ -173,6 +178,7 @@ class Game():
     def move(self, pos: tuple[float, float],):
         row = int((pos[1] - WIN_HEIGHT + GAME_HEIGHT) / (GRID_HEIGHT + LINE_WIDTH))
         col = int(pos[0] / (GRID_WIDTH + LINE_WIDTH))
+        self.last_move = (row, col)
         if self.grid[row * 5 + col] == "0":
             if self.turn == 1:
                 self.grid = self.grid[:row * 5 + col] + "1" + self.grid[row * 5 + col + 1:]
@@ -193,6 +199,96 @@ class Game():
 
     def copy(self) ->  Game:
         return Game(self.grid, self.turn, self.circle_score, self.cross_score)
+
+class UI():
+    def __init__(self, game: Game, player_side: int):
+        self.game = game
+        self.player_side = player_side
+        if os.path.exists("Tourney-SemiBold.ttf"):
+            self.score_font = pygame.font.Font("Tourney-SemiBold.ttf", 70)
+        else:
+            self.score_font  = pygame.font.SysFont('arial', 70)
+        if os.path.exists("Tourney-ExtraBold.ttf"):
+            self.text_font = pygame.font.Font("Tourney-ExtraBold.ttf", 40)
+        else:
+            self.text_font  = pygame.font.SysFont('arial', 40)
+        self.circle_text = self.score_font.render(f"circle", True, CIRCLE_COLOR)
+        self.cross_text = self.score_font.render(f"cross", True, CROSS_COLOR)
+        self.circle_score = self.score_font.render(f"{self.game.circle_score:02d}", True, CIRCLE_COLOR)
+        self.cross_score = self.score_font.render(f"{self.game.cross_score:02d}", True, CROSS_COLOR)
+        self.text = self.text_font.render("circle's turn", True, TEXT_COLOR)
+    
+    def darw(self):
+        self.circle_text = self.score_font.render(f"circle", True, CIRCLE_COLOR)
+        self.cross_text = self.score_font.render(f"cross", True, CROSS_COLOR)
+        self.circle_score = self.score_font.render(f"{self.game.circle_score:02d}", True, CIRCLE_COLOR)
+        self.cross_score = self.score_font.render(f"{self.game.cross_score:02d}", True, CROSS_COLOR)
+        WIN.blit(self.circle_text, (70, 20))
+        WIN.blit(self.cross_text, (510, 20))
+        WIN.blit(self.circle_score, (70, 100))
+        WIN.blit(self.cross_score, (640, 100))
+
+        if self.game.turn == 1:
+            self.text = self.text_font.render("circle's turn", True, TEXT_COLOR)
+            WIN.blit(self.text, (270, 120))
+        elif self.game.turn == -1:
+            self.text = self.text_font.render("cross's turn", True, TEXT_COLOR)
+            WIN.blit(self.text, (275, 120))
+        elif self.game.turn == 0:
+            if self.game.circle_score > self.game.cross_score:
+                self.text = self.text_font.render("circle win", True, TEXT_COLOR)
+                WIN.blit(self.text, (290, 120))
+            elif self.game.circle_score < self.game.cross_score:
+                self.text = self.text_font.render("cross win", True, TEXT_COLOR)
+                WIN.blit(self.text, (295, 120))
+            elif self.game.circle_score == self.game.cross_score:
+                self.text = self.text_font.render("tie", True, TEXT_COLOR)
+                WIN.blit(self.text, (365, 120))
+
+        if self.player_side == 1:
+            pygame.draw.line(WIN, UNDERLINE_COLOR, (65, 93), (310, 93), 3)
+        elif self.player_side == 2:
+            pygame.draw.line(WIN, UNDERLINE_COLOR, (505, 93), (725, 93), 3)
+
+class AI():
+    def __init__(self, play_circle_cross: int):
+        self.play_circle_cross = play_circle_cross
+
+    def move(self, game: Game) -> Game:
+        ai_start_time = datetime.datetime.now()
+        depths = 7
+        max_eval = [-10000 for _ in range(depths)]
+        best_moves = [[] for _ in range(depths)]
+        best_move = (-1, -1)
+        for idx, grid in enumerate(game.grid):
+            if grid == "0":
+                new_game: Game = game.copy()
+                new_game.grid = new_game.grid[:idx] + ("1" if self.play_circle_cross == 1 else "2") + new_game.grid[idx+1:]
+                new_game.turn *= -1
+                new_game.calculate_score(idx // 5, idx % 5)
+                for depth in range(depths):
+                    eval = minimax(new_game, depth, -10000, 10000, False, self.play_circle_cross)
+                    save_memory[(new_game.grid, new_game.turn, depth, False, self.play_circle_cross)] = eval
+                    if eval > max_eval[depth]:
+                        best_moves[depth] = [idx]
+                        max_eval[depth] = eval
+                    elif eval == max_eval[depth]:
+                        best_moves[depth].append(idx)
+        
+        all_best_move = []
+        best_move_appear_times = -100000
+        for idx in range(25):
+            appear_times = sum(i.count(idx) for i in best_moves)
+            if appear_times > best_move_appear_times:
+                all_best_move = [idx]
+                best_move_appear_times = appear_times
+            elif appear_times == best_move_appear_times:
+                all_best_move.append(idx)
+        
+        best_move = random.choice(all_best_move)
+        game.move(((best_move % 5) * (LINE_WIDTH + GRID_WIDTH) + GRID_WIDTH /2, (best_move // 5) * (LINE_WIDTH + GRID_HEIGHT) + GRID_HEIGHT /2 + WIN_HEIGHT - GAME_HEIGHT))
+        print(f"ai think time: {datetime.datetime.now() - ai_start_time}")
+        return game
 
 def minimax(game: Game, depth: int, alpha: int, beta: int, maximizing_player: bool, play_circle_cross: int):
     # end case
@@ -239,11 +335,13 @@ def minimax(game: Game, depth: int, alpha: int, beta: int, maximizing_player: bo
         return min_eval
 
 def main():
+    mode = 0 # 0->ai1 vs. ai2, 1->player vs. ai1, 2->player vs. player
     run = True
     clock = pygame.time.Clock()
     game = Game()
-    ai = random.choice([1, 2])
-    saved = False
+    ai1 = AI(random.choice([1, 2]))
+    ai2 = AI(1 if ai1.play_circle_cross == 2 else 2)
+    ui = UI(game, 1 if ai1.play_circle_cross == 2 else 2)
 
     while run:
         for event in pygame.event.get():
@@ -251,57 +349,34 @@ def main():
                 run = False
             # player move
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if (game.turn == -1 and ai == 1) or (game.turn == 1 and ai == 2):
+                if mode == 1:
+                    if (game.turn == -1 and ai1.play_circle_cross == 1) or (game.turn == 1 and ai1.play_circle_cross == 2):
+                        game.move(event.pos)
+                if mode == 2:
                     game.move(event.pos)
 
         WIN.fill(BACK_GROUND_COLOR)
         
         game.draw()
+        ui.darw()
         pygame.display.update()
 
-        # ai move
-        if (game.turn == 1 and ai == 1) or (game.turn == -1 and ai == 2):
-            ai_start_time = datetime.datetime.now()
-            depths = 7
-            max_eval = [-10000 for _ in range(depths)]
-            best_moves = [[] for _ in range(depths)]
-            best_move = (-1, -1)
-            for idx, grid in enumerate(game.grid):
-                if grid == "0":
-                    new_game: Game = game.copy()
-                    new_game.grid = new_game.grid[:idx] + ("1" if ai == 1 else "2") + new_game.grid[idx+1:]
-                    new_game.turn *= -1
-                    new_game.calculate_score(idx // 5, idx % 5)
-                    for depth in range(depths):
-                        eval = minimax(new_game, depth, -10000, 10000, False, ai)
-                        if eval > max_eval[depth]:
-                            best_moves[depth] = [idx]
-                            max_eval[depth] = eval
-                        elif eval == max_eval[depth]:
-                            best_moves[depth].append(idx)
-            
-            all_best_move = []
-            best_move_appear_times = -100000
-            for idx in range(25):
-                appear_times = sum(i.count(idx) for i in best_moves)
-                if appear_times > best_move_appear_times:
-                    all_best_move = [idx]
-                    best_move_appear_times = appear_times
-                elif appear_times == best_move_appear_times:
-                    all_best_move.append(idx)
-            
-            best_move = random.choice(all_best_move)
-            game.move(((best_move % 5) * (LINE_WIDTH + GRID_WIDTH) + GRID_WIDTH /2, (best_move // 5) * (LINE_WIDTH + GRID_HEIGHT) + GRID_HEIGHT /2 + WIN_HEIGHT - GAME_HEIGHT))
-            print(f"ai think time: {datetime.datetime.now() - ai_start_time}")
+        ai2_can_move = True
+        # ai1 move
+        if mode != 2 and ((game.turn == 1 and ai1.play_circle_cross == 1) or (game.turn == -1 and ai1.play_circle_cross == 2)):
+            game = ai1.move(game)
+            ai2_can_move = False
+        
+        # ai2 move
+        if ai2_can_move and mode == 0 and ((game.turn == 1 and ai2.play_circle_cross == 1) or (game.turn == -1 and ai2.play_circle_cross == 2)):
+            game = ai2.move(game)
 
         game.draw()
         clock.tick(FPS)
         pygame.display.update()
 
-        # save minimax_memory
-        if game.turn == 0 and not saved:
-            pickle.dump(minimax_memory, open("minimax_memory.pickle", "wb"))
-            saved = True
+    # save minimax_memory
+    pickle.dump(save_memory, open("minimax_memory.pickle", "wb"))
 
 if __name__ == '__main__':
     main()
