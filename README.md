@@ -62,7 +62,7 @@ Any five marks diagonal line with both end touches the border of the board.
 
 Any row or column.
 <p align="center">
-    <img src="README\image\rules_straight.png" width=30% height=30%>
+    <img src="README\image\rules_Straight.png" width=30% height=30%>
 </p>
 
 ### 6. Square: 1 point
