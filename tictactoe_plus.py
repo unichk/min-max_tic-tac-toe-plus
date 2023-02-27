@@ -35,6 +35,7 @@ MENU_TITLE_COLOR = (0, 0, 0)
 circle_image = pygame.transform.scale(pygame.image.load('circle.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7)).convert_alpha()
 cross_image = pygame.transform.scale(pygame.image.load('cross.png'), (GRID_WIDTH * 0.7, GRID_HEIGHT * 0.7)).convert_alpha()
 home_image = pygame.image.load('home_icon.png').convert_alpha()
+loggo_image = pygame.transform.scale(pygame.image.load('logo.png'), (442, 172)).convert_alpha()
 
 minimax_memory = dict()
 save_memory = dict()
@@ -186,8 +187,8 @@ class Game():
         row = int((pos[1] - WIN_HEIGHT + GAME_HEIGHT) / (GRID_HEIGHT + LINE_WIDTH))
         col = int(pos[0] / (GRID_WIDTH + LINE_WIDTH))
         if row >= 0 and row < 5 and col >= 0 and col < 5:
-            self.last_move = (row, col)
             if self.grid[row * 5 + col] == "0":
+                self.last_move = (row, col)
                 if self.turn == 1:
                     self.grid = self.grid[:row * 5 + col] + "1" + self.grid[row * 5 + col + 1:]
                     self.calculate_score(row, col)
@@ -386,14 +387,14 @@ class Menu():
             self.font = pygame.font.Font("Tourney-SemiBold.ttf", 120)
         else:
             self.font  = pygame.font.SysFont('arial', 120)
-        self.title = self.font.render("MENU", True, MENU_TITLE_COLOR)
-        self.button_pvp = Button("Player vs. Player", pygame.Rect(135, 350, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
-        self.button_pve = Button("Player vs.     AI", pygame.Rect(135, 520, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
-        self.button_eve = Button("    AI      vs.     AI", pygame.Rect(135, 690, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
+        self.title = loggo_image
+        self.button_pvp = Button("Player vs. Player", pygame.Rect(135, 385, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
+        self.button_pve = Button("Player vs.     AI", pygame.Rect(135, 555, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
+        self.button_eve = Button("    AI      vs.     AI", pygame.Rect(135, 725, 535, 90), MENU_BUTTON_COLOR, MENU_BUTTON_HOVER_COLOR, None, -1, 30, 10, 10, 30)
     
     def draw(self):
         WIN.fill(BACK_GROUND_COLOR)
-        WIN.blit(self.title, (230, 75))
+        WIN.blit(self.title, (195, 110))
         self.button_pvp.draw()
         self.button_pve.draw()
         self.button_eve.draw()
