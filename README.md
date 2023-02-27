@@ -8,7 +8,7 @@ A more complicated version of the classic game tic-tac-toe.
 
 ## Choose your language
 
-- [English](./README_en.md)
+- [English](./README.md)
 
 ## Installation
 
