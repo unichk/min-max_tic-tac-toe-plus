@@ -9,6 +9,7 @@ A more complicated version of the classic game tic-tac-toe.
 ## Choose your language
 
 - [English](./README.md)
+- [中文](./README_zh-tw.md)
 
 ## Installation
 
@@ -24,7 +25,7 @@ A more complicated version of the classic game tic-tac-toe.
 
 ## Start the game
 
-Open cmd in the game folder and type in `py -3.11 tictactoe_plus.py`.
+Open `cmd` in the game folder and type in `py -3.11 tictactoe_plus.py`.
 
 ## Rules
 
@@ -71,6 +72,11 @@ Any two by two square.
 <p align="center">
     <img src="README\image\rules_Square.png" width=30% height=30%>
 </p>
+
+## Note
+
+- The side player plays will be marked by an underline.
+- AI may take up to 15 seconds to play its move.
 
 ## License
 
